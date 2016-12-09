@@ -2,6 +2,55 @@
 # GR-CITRUS with WA-MIKAN
 # 利用できるピンは、1, 3, 4, 6, 9, 10, 14, 15, 16, 17, 18番ピン
 
+# SDカードに保存されたhttp通信結果からBodyだけを取り出して新しいファイルを作る
+def remove_headers(src, dst)
+    SD.remove(dst) if SD.exists(dst)
+    
+    SD.open(0, src, 0)
+    SD.open(1, dst, 2)
+    
+    # ヘッダ部分部分を読み飛ばす
+    loop do
+        c = SD.read(0)
+        break if c < 0
+        if c == 0x0d
+            c = SD.read(0)
+            if c > 0 and c == 0x0a
+                c = SD.read(0)
+                if c > 0 and c == 0x0d
+                    c = SD.read(0)
+                    if c > 0 and c == 0x0a
+                        break
+                    end
+                end
+            end
+        end
+    end
+    
+    # 新しいファイルに書き出す
+    buf = []
+    a = 1
+    loop do
+        c = SD.read(0)
+        break if c < 0
+        buf << c.chr
+        if buf.length > 300
+            led a
+            a = 1 - a
+            SD.write(1, buf.join, buf.length)
+            buf = []
+            delay 1
+        end
+    end
+    
+    SD.write(1, buf.join, buf.length) if buf.length > 0
+    buf = nil
+
+    SD.flush(1)
+    SD.close(1)
+    SD.close(0)
+end
+
 # 4桁7セグLEDモジュール [TM4D595] - aitendo
 class TM4D595
 
@@ -105,11 +154,12 @@ pinMode(PIN_BREAK, 0x2)     # set pin to input_pullup
 display = TM4D595.new(17, 16, 15)
 
 # MP3の初期化
-# MP3.play "/music.wav"
 if System.useMP3(3,4) == 0
   Debug.println "MP3 can't use."
   System.exit
 end
+# MP3.play "/forecast.wav"
+# MP3.play "/music.wav"
 
 
 if System.useSD() == 0
@@ -130,11 +180,11 @@ end
 # Debug.println WiFi.version
 # Debug.println WiFi.disconnect
 Debug.println WiFi.setMode 3 #Station-Mode & SoftAPI-Mode
-Debug.println WiFi.connect("AirPort15422","7398899665975")
+Debug.println WiFi.connect('AirPort15422', '7398899665975')
 Debug.println WiFi.ipconfig
 Debug.println WiFi.multiConnect 1
 
-if WiFi.httpGetSD("time.txt","192.168.0.11:1880/hello").to_s == 0
+if WiFi.httpGetSD('time.txt','192.168.0.10:1880/time').to_s == 0
   Debug.println "Can't connect to server"
   System.exit() 
 end
@@ -158,16 +208,42 @@ buf = []
 date = []
 delay 1 # GC
 
-PIN_BTN = 4 # ボタン用ピン
+PIN_BTN_DATE = 4    # 日付表示ボタン用ピン(MP3停止と兼用)
+PIN_BTN_WEATHER = 6 # 天気予報ボタン用ピン
+PIN_BTN_MUSIC = 9   # 音楽再生ボタン用ピン
+pinMode(PIN_BTN_WEATHER, 0x2)     # set pin to input_pullup
+pinMode(PIN_BTN_MUSIC, 0x2)     # set pin to input_pullup
 
 # メインループ
 loop do
     break if digitalRead(PIN_BREAK) == 0 # デバッグ用(14ピンをGNDに落とすとbreak)
-    
+
+    # 天気予報ボタンが押されたら、天気予報の再生を開始
+    if digitalRead(PIN_BTN_WEATHER) == 0
+      Debug.println "Download Start"
+      if WiFi.httpGetSD('forecast.tmp','192.168.0.10:1880/forecast.wav').to_s == 0
+        Debug.println "Can't connect to server"
+        System.exit() 
+      end
+  
+      Debug.println "Remove Headers"
+      remove_headers('forecast.tmp', 'forecast.wav')
+      delay 1 # GC
+  
+      Debug.println "Wav Play"
+      MP3.play "forecast.wav"
+    end
+
+    # 音楽再生ボタンが押されたら、music.wavの再生を開始
+    if digitalRead(PIN_BTN_MUSIC) == 0
+      Debug.println "Wav Play"
+      MP3.play "music.wav"
+    end
+
     # 時刻の表示
     year, month, day, hour, minute, second, weekday = Rtc.getTime
     
-    if digitalRead(PIN_BTN) == 0
+    if digitalRead(PIN_BTN_DATE) == 0
       h1, h0 = month.divmod(10)
       m1, m0 = day.divmod(10)
     else
