@@ -14,15 +14,17 @@ GR-CITRUS with WA-MIKAN(WiFi、MP3)のデモです。ボタンを押すと、今
 
 サーバーサイドAPIでは、`http://localhost:1880/forecast.wav`にアクセスすると、天気予報の合成音声ファイル(wavファイル)を作成して返します。サーバーサイドAPIは[Node-RED](https://nodered.org/)を利用して実装します。なお、Node-REDには[Node-RED日本ユーザー会](https://nodered.jp/)もあります。
 
+### Node-REDの設定手順
 * [Node.js](https://nodejs.org/ja/)をインストールしてください。
 * [Node-RED](https://nodered.org/)をインストールしてください。
 * コマンドプロンプトで、`node-red`を起動してください。
 * ログにServer now runningが表示されたら、ブラウザで [http://127.0.0.1:1880/](http://127.0.0.1:1880/)へアクセスしてください。
 * 右上のメニューボタン > import > Clipboardを選び、Import Nodesダイアログを開いてください。後述のNode-REDのソースコードの内容をコピーして、ダイアログにペーストし、Importボタンを押してください。
 * 正常にフローが取り込まれたら、`天気予報取得`のノード(箱)をダブルクリックしてください。URLのcityを天気予報を取得したい場所に変更してください。また、`IDとパスワードの設定`のノード（箱）をダブルクリックしてください。service_idとpasswordにリカイアスのデベロッパー登録で取得したIDとパスワードを設定してください。
-* 右上のDeployボタンを押して、反映してください。 [http://127.0.0.1:1880/forecast.wav](http://127.0.0.1:1880/forecast.wav)へアクセスすると、天気予報の合成音声ファイル(wavファイル)が取得できます。
+* 右上のDeployボタンを押して、反映してください。
+*  [http://127.0.0.1:1880/forecast.wav](http://127.0.0.1:1880/forecast.wav)へアクセスすると、天気予報の合成音声ファイル(wavファイル)が取得できます。
 
-## Node-REDのソースコード
+### Node-REDのソースコード
 
 ```
 [
@@ -237,3 +239,7 @@ GR-CITRUS with WA-MIKAN(WiFi、MP3)のデモです。ボタンを押すと、今
     }
 ]
 ```
+
+## GR-CITRUSの実装
+
+T.B.D.
