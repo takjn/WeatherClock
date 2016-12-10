@@ -1,8 +1,29 @@
 # WeatherWatch
-GR-CITRUS with WA-MIKANのデモ
+GR-CITRUS with WA-MIKAN(WiFi、MP3)のデモです。ボタンを押すと、今日と明日の天気予報をインターネットから取得して読み上げます。
 
-node-redが必要。
-developer recaiusの登録が必要。
+## 事前準備
+
+合成音声ファイルの作成には、東芝が提供するリカイアスのAPIを使います。
+[RECAIUS™ Developers](https://developer.recaius.io/jp/top.html)からデベロッパー登録を行い、RECAIUS™ APIを利用するためのIDとパスワードを取得してください。
+
+## 天気予報の取得
+
+天気予報の取得にはlivedoorが提供する[お天気Webサービス](http://weather.livedoor.com/weather_hacks/webservice)を使います。天気予報を取得する場所のパラメーターとしてcityを指定する必要があります。 [全国の地点定義表（RSS）](http://weather.livedoor.com/forecast/rss/primary_area.xml)を見てcityのidを確認してください。
+
+## サーバーAPIの実装
+
+サーバーサイドAPIでは、`http://localhost:1880/forecast.wav`にアクセスすると、天気予報の合成音声ファイル(wavファイル)を作成して返します。サーバーサイドAPIは[Node-RED](https://nodered.org/)を利用して実装します。なお、Node-REDには[Node-RED日本ユーザー会](https://nodered.jp/)もあります。
+
+* [Node.js](https://nodejs.org/ja/)をインストールしてください。
+* [Node-RED](https://nodered.org/)をインストールしてください。
+* コマンドプロンプトで、`node-red`を起動してください。
+* ログにServer now runningが表示されたら、ブラウザで [http://127.0.0.1:1880/](http://127.0.0.1:1880/)へアクセスしてください。
+* 右上のメニューボタン > import > Clipboardを選び、Import Nodesダイアログを開いてください。後述のNode-REDのソースコードの内容をコピーして、ダイアログにペーストし、Importボタンを押してください。
+* 正常にフローが取り込まれたら、`天気予報取得`のノード(箱)をダブルクリックしてください。URLのcityを天気予報を取得したい場所に変更してください。また、`IDとパスワードの設定`のノード（箱）をダブルクリックしてください。service_idとpasswordにリカイアスのデベロッパー登録で取得したIDとパスワードを設定してください。
+* 右上のDeployボタンを押して、反映してください。 [http://127.0.0.1:1880/forecast.wav](http://127.0.0.1:1880/forecast.wav)へアクセスすると、天気予報の合成音声ファイル(wavファイル)が取得できます。
+
+## Node-REDのソースコード
+
 ```
 [
     {
