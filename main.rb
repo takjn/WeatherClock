@@ -2,13 +2,23 @@
 # GR-CITRUS with WA-MIKAN
 # 利用できるピンは、1, 3, 4, 6, 9, 10, 14, 15, 16, 17, 18番ピン
 
-# ピンの設定
+# サーバーAPIのアドレス
+SERVER_API = '192.168.0.10:1880'
+
+# WiFiのSSIDとパスワード
+WIFI_SSID = 'AirPort15422'
+WIFI_PASS = '7398899665975'
+
+# 天気予報を取得する時刻(6を指定すると6:00に取得)
+FORECAST_TIMER_HOUR = 6
+
+# ボタン用のピンの設定 (GR-CITRUSの各ピン -> ボタンスイッチ -> GND )
 PIN_BREAK = 14      # Breakボタン用ピン
 PIN_BTN_DATE = 4    # 日付表示ボタン用ピン(MP3停止と兼用)
 PIN_BTN_WEATHER = 6 # 天気予報ボタン用ピン
-PIN_BTN_MUSIC = 9   # 音楽再生ボタン用ピン
+PIN_BTN_MUSIC = 3   # 音楽再生ボタン用ピン(MP3一時停止と兼用)
 
-# TM4D595のピンの設定
+# TM4D595のピンの設定 (GR-CITRUSの各ピン -> TM4D595で対応するピン)
 PIN_TM4D595_DIO = 17
 PIN_TM4D595_RCLK = 16
 PIN_TM4D595_SCLK = 15
@@ -151,95 +161,102 @@ class Debug
         @@serial.write(val, bytes) unless @@serial.nil?
     end
 end
-Debug.init
 
-# ボタン用ピンの初期化
-pinMode(PIN_BREAK, 0x2)         # set pin to input_pullup
-pinMode(PIN_BTN_WEATHER, 0x2)   # set pin to input_pullup
-pinMode(PIN_BTN_MUSIC, 0x2)     # set pin to input_pullup
+# セットアップ
+def setup
+  # デバッグの初期化
+  Debug.init
+  
+  # ボタン用ピンの初期化
+  pinMode(PIN_BREAK, 0x2)         # set pin to input_pullup
+  pinMode(PIN_BTN_WEATHER, 0x2)   # set pin to input_pullup
+  pinMode(PIN_BTN_MUSIC, 0x2)     # set pin to input_pullup
+  
+  # RTCの初期化
+  System.exit if Rtc.init == 0
+  Rtc.setTime([2016, 12, 5, 22, 59, 55])
+  
+  # MP3の初期化
+  System.exit if System.useMP3(3,4) == 0
+  
+  # SDカードの初期化
+  System.exit if System.useSD == 0
+  
+  #ESP8266を一度停止させる(リセットと同じ)
+  pinMode(5,1)
+  digitalWrite(5,0) # LOW:Disable
+  delay 500
+  digitalWrite(5,1) # LOW:Disable
+  
+  System.exit if System.useWiFi == 0
+  
+  # Debug.println WiFi.version
+  # Debug.println WiFi.disconnect
+  Debug.println WiFi.setMode 3 #Station-Mode & SoftAPI-Mode
+  Debug.println WiFi.connect(WIFI_SSID, WIFI_PASS)
+  Debug.println WiFi.ipconfig
+  Debug.println WiFi.multiConnect 1
 
-# RTCの初期化
-System.exit if Rtc.init == 0
-Rtc.setTime([2016, 12, 5, 22, 59, 55])
+  # 天気予報の取得
+  get_forecast
+  
+  # 時刻の取得
+  if WiFi.httpGetSD('time.txt', "#{SERVER_API}/time").to_s == 0
+    Debug.println "Can't connect to server"
+    System.exit
+  end
+  
+  SD.open(0, 'time.txt', 0)
+  buf = []
+  loop do
+    c = SD.read(0)
+    break if c < 0
+    buf << c.chr
+  end
+  SD.close(0)
+  date = buf.join.split("\r\n").last.chomp.split(",") # 最後の1行を取得し","で分割
+  (0..5).each do |i|
+    date[i] = date[i].to_i
+    Debug.println(date[i].to_s)
+  end
+  Rtc.setTime([date[0], date[1], date[2], date[3], date[4], date[5]])
+  
+  buf = nil
+  date = nil
+  delay 1 # GC
+end
+
+# 天気予報の取得
+def get_forecast
+  Debug.println "Download Start"
+  if WiFi.httpGetSD('forecast.tmp', "#{SERVER_API}/forecast.wav").to_s == 0
+    Debug.println "Can't connect to server"
+    System.exit()
+  end
+
+  Debug.println "Remove Headers"
+  remove_headers('forecast.tmp', 'forecast.wav')
+  delay 1 # GC
+end
 
 # TM4D595の初期化
 display = TM4D595.new(PIN_TM4D595_DIO, PIN_TM4D595_RCLK, PIN_TM4D595_SCLK)
-
-# MP3の初期化
-if System.useMP3(3,4) == 0
-  Debug.println "MP3 can't use."
-  System.exit
-end
-
-# SDカードの初期化
-if System.useSD() == 0
-  Debug.println "SD Card can't use."
-  System.exit
-end
-
-#ESP8266を一度停止させる(リセットと同じ)
-pinMode(5,1)
-digitalWrite(5,0) # LOW:Disable
-delay 500
-digitalWrite(5,1) # LOW:Disable
-
-if System.useWiFi() == 0 then
-  Debug.println "WiFi Card can't use."
-  System.exit()
-end
-# Debug.println WiFi.version
-# Debug.println WiFi.disconnect
-Debug.println WiFi.setMode 3 #Station-Mode & SoftAPI-Mode
-Debug.println WiFi.connect('AirPort15422', '7398899665975')
-Debug.println WiFi.ipconfig
-Debug.println WiFi.multiConnect 1
-
-if WiFi.httpGetSD('time.txt','192.168.0.10:1880/time').to_s == 0
-  Debug.println "Can't connect to server"
-  System.exit()
-end
-
-SD.open(0, 'time.txt', 0)
-buf = []
-loop do
-  c = SD.read(0)
-  break if c < 0
-  buf << c.chr
-end
-SD.close(0)
-date = buf.join.split("\r\n").last.chomp.split(",") # 最後の1行を取得し","で分割
-(0..5).each do |i|
-  date[i] = date[i].to_i
-  Debug.println(date[i].to_s)
-end
-Rtc.setTime([date[0], date[1], date[2], date[3], date[4], date[5]])
-
-buf = []
-date = []
-delay 1 # GC
+setup
 
 # メインループ
 loop do
     break if digitalRead(PIN_BREAK) == 0 # デバッグ用(14ピンをGNDに落とすとbreak)
-
+    
     # 天気予報ボタンが押されたら、天気予報の再生を開始
     if digitalRead(PIN_BTN_WEATHER) == 0
-      Debug.println "Download Start"
-      if WiFi.httpGetSD('forecast.tmp','192.168.0.10:1880/forecast.wav').to_s == 0
-        Debug.println "Can't connect to server"
-        System.exit()
-      end
-
-      Debug.println "Remove Headers"
-      remove_headers('forecast.tmp', 'forecast.wav')
-      delay 1 # GC
-
-      Debug.println "Wav Play"
+      delay 100
+      Debug.println "Forecast Play"
       MP3.play "forecast.wav"
     end
 
     # 音楽再生ボタンが押されたら、music.wavの再生を開始
     if digitalRead(PIN_BTN_MUSIC) == 0
+      delay 100
       Debug.println "Wav Play"
       MP3.play "music.wav"
     end
@@ -260,6 +277,9 @@ loop do
     display.hc_dio_analyze(1, m1)
     display.hc_dio_analyze(0, m0)
     delay 1
+
+    # 天気予報の取得（１日に１回）
+    get_forecast if hour == FORECAST_TIMER_HOUR and minute = 0
 
 end
 
