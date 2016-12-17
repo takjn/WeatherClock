@@ -1,4 +1,6 @@
-# WeatherWatch
+# WeatherClock
+![WeatherClock](https://github.com/takjn/weatherclock/raw/master/images/WeatherClock.jpg)
+
 GR-CITRUS with WA-MIKAN(WiFi、MP3)のデモです。ボタンを押すと、今日と明日の天気予報をインターネットから取得して読み上げます。
 
 ## 事前準備

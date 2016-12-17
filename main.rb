@@ -3,11 +3,11 @@
 # 利用できるピンは、1, 3, 4, 6, 9, 10, 14, 15, 16, 17, 18番ピン
 
 # サーバーAPIのアドレス
-SERVER_API = '192.168.0.10:1880'
+SERVER_API = '192.168.34.26:1880'
 
 # WiFiのSSIDとパスワード
-WIFI_SSID = 'AirPort15422'
-WIFI_PASS = '7398899665975'
+WIFI_SSID = 'elecom2g01-45ea1e'
+WIFI_PASS = 'renerene'
 
 # 天気予報を取得する時刻(6を指定すると6:00に取得)
 FORECAST_TIMER_HOUR = 6
